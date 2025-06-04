@@ -3,6 +3,7 @@ import {
   ResourceTemplate,
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { text } from "stream/consumers";
 import { z } from "zod";
 
 // Create an MCP server
@@ -29,6 +30,45 @@ server.tool(
 
     return {
       content: [{ type: "text", text: "成功" }],
+    };
+  }
+);
+
+server.tool(
+  "getChannelMessages",
+  { channelId: z.string() },
+  async ({ channelId }) => {
+    const params = new URLSearchParams({
+      channel: channelId,
+      limit: "10",
+    });
+
+    const response = await fetch(
+      `https://slack.com/api/conversations.history?${params}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${process.env.SLACK_BOT_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      return {
+        content: [{ type: "text", text: `エラー: ${data.error}` }],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(data),
+        },
+      ],
     };
   }
 );
